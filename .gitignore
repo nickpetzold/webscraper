@@ -1,3 +1,5 @@
 *.pyc
 __pycache__
 .vscode
+external_resources.json
+privacy_policy_word_frequency.json
