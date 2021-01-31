@@ -1,0 +1,4 @@
+attrdict==2.0.1
+beautifulsoup4==4.9.3
+pytest==6.2.2
+requests==2.25.1
