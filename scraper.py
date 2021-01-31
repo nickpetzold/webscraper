@@ -40,14 +40,14 @@ def is_external_resource(tag, url):
     return False
 
 
-def guess_resource_type(path):
-    path = path.lower()
+def guess_resource_type(url):
+    url = url.lower()
 
     for ext, res_type in EXTENSION_RESOURCE_MAP.items():
-        if path.endswith(ext):
+        if url.endswith(ext):
             return res_type
 
-    if any([path.endswith(ext) for ext in FONT_EXTENSIONS]) or "font" in path:
+    if any([url.endswith(ext) for ext in FONT_EXTENSIONS]) or "font" in url:
         return "font"
 
     return "link"
@@ -97,6 +97,21 @@ def add_domain_if_required(address, source_url):
 
 
 def run(url, output_dir=CURRENT_DIR):
+    """
+    Takes a url address which is scraped to find all externally
+    hosted resources on that page. A list of these resources are
+    written to a JSON file, broken down by resource type.
+
+    The links within the page are then searched to find the
+    Privacy Policy page from which a word frequency dictionary
+    is built of all visible text on this page and written to a
+    JSON file.
+
+    @param url          URL of webage to be scraped
+    @param output_dir   The location of JSON files output by
+                        this function.
+    """
+
     if not os.path.isdir(output_dir):
         raise FileNotFoundError(f"{output_dir} is not a valid directory")
 
