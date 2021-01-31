@@ -21,7 +21,7 @@ EXTENSION_RESOURCE_MAP = {
 }
 
 
-def get_page(url):
+def get_response(url):
     try:
         return requests.get(url)
 
@@ -53,8 +53,8 @@ def guess_resource_type(url):
     return "link"
 
 
-def extract_text_from_page(page):
-    soup = BeautifulSoup(page.content, "html.parser")
+def extract_text_from_response(response):
+    soup = BeautifulSoup(response.content, "html.parser")
     non_visible_tags = [
         "[document]",
         "html",
@@ -96,6 +96,14 @@ def add_domain_if_required(address, source_url):
     return address
 
 
+class PageNotFound(Exception):
+    pass
+
+
+class PageNotAccessible(Exception):
+    pass
+
+
 def run(url, output_dir=CURRENT_DIR):
     """
     Takes a url address which is scraped to find all externally
@@ -115,9 +123,15 @@ def run(url, output_dir=CURRENT_DIR):
     if not os.path.isdir(output_dir):
         raise FileNotFoundError(f"{output_dir} is not a valid directory")
 
-    page = get_page(url)
+    response = get_response(url)
 
-    soup = BeautifulSoup(page.content, "html.parser")
+    if response.status_code == 404:
+        raise PageNotFound(f"Not found: {url}")
+
+    elif response.status_code != 200:
+        raise PageNotAccessible(f"Unable to access {url}")
+
+    soup = BeautifulSoup(response.content, "html.parser")
     all_elems = soup.find_all()
 
     external_resources = [
@@ -174,8 +188,8 @@ def run(url, output_dir=CURRENT_DIR):
     else:
         target_url = pp_href[0]
 
-    pp_page = get_page(target_url)
-    text = extract_text_from_page(pp_page)
+    pp_response = get_response(target_url)
+    text = extract_text_from_response(pp_response)
 
     word_freq = generate_word_freq_dict(text)
 
