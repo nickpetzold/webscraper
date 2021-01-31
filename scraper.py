@@ -1,11 +1,13 @@
+import argparse
 import os
 import re
-import sys
 from collections import Counter, defaultdict
 from urllib.parse import urlparse
 
+import nltk
 import requests
 from bs4 import BeautifulSoup
+from nltk.corpus import words
 
 from utils import read_json, write_json
 
@@ -73,10 +75,15 @@ def extract_text_from_response(response):
     return " ".join(text)
 
 
-def generate_word_freq_dict(text):
+def generate_word_freq_dict(text, valid):
     escape_chars = [chr(char) for char in range(1, 32)]
     text = text.translate({ord(ec): " " for ec in escape_chars}).lower()
+
     word_list = re.findall(r"\b[^\d\W]+\b", text)
+
+    if valid:
+        nltk.download("words")
+        word_list = [word for word in word_list if word in words.words()]
 
     return Counter(word_list)
 
@@ -104,7 +111,7 @@ class PageNotAccessible(Exception):
     pass
 
 
-def run(url, output_dir=CURRENT_DIR):
+def run(url, output_dir, valid):
     """
     Takes a url address which is scraped to find all externally
     hosted resources on that page. A list of these resources are
@@ -150,7 +157,7 @@ def run(url, output_dir=CURRENT_DIR):
 
     if output:
         er_path = os.path.join(output_dir, "external_resources.json")
-        write_json(output, er_path)
+        write_json(output, er_path, "External resources")
 
     pp_href = list(
         set(
@@ -191,15 +198,29 @@ def run(url, output_dir=CURRENT_DIR):
     pp_response = get_response(target_url)
     text = extract_text_from_response(pp_response)
 
-    word_freq = generate_word_freq_dict(text)
+    word_freq = generate_word_freq_dict(text, valid)
 
     write_json(
         word_freq,
-        os.path.join(CURRENT_DIR, "privacy_policy_word_frequency.json"),
+        os.path.join(output_dir, "privacy_policy_word_frequency.json"),
+        "Privacy policy word frequency",
     )
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
+    parser = argparse.ArgumentParser(description="Scrape a webpage.")
+    parser.add_argument("url", help="URL to be scraped")
+    parser.add_argument(
+        "output_dir",
+        help="Directory where output files are written",
+        nargs="?",
+        default=CURRENT_DIR,
+    )
+    parser.add_argument(
+        "--valid",
+        action="store_true",
+        help="Check words are valid English words",
+    )
+    args = parser.parse_args()
 
-    run(*args)
+    run(args.url, args.output_dir, args.valid)
